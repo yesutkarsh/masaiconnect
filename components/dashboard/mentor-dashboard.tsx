@@ -60,9 +60,9 @@ export default function MentorDashboard() {
 
       <div className="grid gap-6 md:grid-cols-2">
         <div>
-          <h2 className="text-xl font-semibold text-[#333333] mb-2">Upcoming Sessions</h2>
+          {/* <h2 className="text-xl font-semibold text-[#333333] mb-2">Upcoming Sessions</h2> */}
 
-          {loadingSessions ? (
+          {/* {loadingSessions ? (
             <LoadingSpinner />
           ) : upcomingSessions.length === 0 ? (
             <p className="text-base text-[#333333]">No upcoming sessions.</p>
@@ -94,7 +94,7 @@ export default function MentorDashboard() {
                 )
               })}
             </div>
-          )}
+          )} */}
         </div>
 
         <div>

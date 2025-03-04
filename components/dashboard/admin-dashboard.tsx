@@ -69,7 +69,7 @@ export default function AdminDashboard() {
       ) : (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-6">
           {/* Stat Cards */}
-          <div className="bg-white p-6 rounded-lg shadow-sm border border-[#e0e0e0]">
+          {/* <div className="bg-white p-6 rounded-lg shadow-sm border border-[#e0e0e0]">
             <h3 className="text-base font-semibold text-[#333333] mb-1">Total Students</h3>
             <p className="text-3xl font-bold text-[#3498db]">{stats.totalStudents}</p>
           </div>
@@ -87,7 +87,7 @@ export default function AdminDashboard() {
           <div className="bg-white p-6 rounded-lg shadow-sm border border-[#e0e0e0]">
             <h3 className="text-base font-semibold text-[#333333] mb-1">Upcoming Sessions</h3>
             <p className="text-3xl font-bold text-[#e74c3c]">{stats.upcomingSessions}</p>
-          </div>
+          </div> */}
         </div>
       )}
 

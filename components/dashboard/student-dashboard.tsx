@@ -67,7 +67,7 @@ export default function StudentDashboard() {
       {/* Main Grid Layout */}
       <div className="grid gap-6 md:grid-cols-2">
         {/* Upcoming Sessions Section */}
-        <div>
+        {/* <div>
           <h2 className="text-xl font-semibold text-[#333333] mb-2">
             Upcoming Sessions
           </h2>
@@ -105,7 +105,7 @@ export default function StudentDashboard() {
               })}
             </div>
           )}
-        </div>
+        </div> */}
 
         {/* Quick Actions Section */}
         <div>
