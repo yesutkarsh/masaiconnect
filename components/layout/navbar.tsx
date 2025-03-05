@@ -4,7 +4,7 @@ import Link from "next/link"
 import { useAuth } from "@/context/AuthContext"
 import { useState } from "react"
 import { FaUser, FaBook, FaCalendar, FaCog } from "react-icons/fa"
-import { Menu } from "../ui/Menu"
+import { Menu } from "../ui/menu"
 import { MenuButton, MenuItem, MenuItems } from "../ui/Menu"
 export default function Navbar() {
   const { user, logout, userData } = useAuth()
