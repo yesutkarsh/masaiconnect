@@ -42,10 +42,16 @@ export default function Signup() {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password)
       const user = userCredential.user
 
+      const roles = [role]
+      if (role === "mentor" || role === "admin") {
+        roles.push("student") // Mentors and admins can also be students
+      }
+
       await setDoc(doc(db, "users", user.uid), {
         name,
         email,
-        role,
+        roles,
+        activeRole: role,
         course: role === "student" ? course : null,
         createdAt: new Date().toISOString(),
         sessionCount: 0,
@@ -157,10 +163,7 @@ export default function Signup() {
         {role === "mentor" && (
           <>
             <div className="mb-4">
-              <label
-                htmlFor="mentorCourse"
-                className="block text-base font-semibold text-[#333333] mb-1"
-              >
+              <label htmlFor="mentorCourse" className="block text-base font-semibold text-[#333333] mb-1">
                 Course You Mentor
               </label>
               <select
@@ -176,10 +179,7 @@ export default function Signup() {
               </select>
             </div>
             <div className="mb-4">
-              <label
-                htmlFor="verificationCode"
-                className="block text-base font-semibold text-[#333333] mb-1"
-              >
+              <label htmlFor="verificationCode" className="block text-base font-semibold text-[#333333] mb-1">
                 Mentor Verification Code
               </label>
               <input
@@ -196,10 +196,7 @@ export default function Signup() {
 
         {role === "admin" && (
           <div className="mb-4">
-            <label
-              htmlFor="adminCode"
-              className="block text-base font-semibold text-[#333333] mb-1"
-            >
+            <label htmlFor="adminCode" className="block text-base font-semibold text-[#333333] mb-1">
               Admin Verification Code
             </label>
             <input
@@ -231,3 +228,4 @@ export default function Signup() {
     </div>
   )
 }
+

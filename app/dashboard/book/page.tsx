@@ -6,6 +6,7 @@ import { collection, query, where, getDocs, doc, getDoc, updateDoc, addDoc, incr
 import { db } from "@/lib/firebase"
 import { useAuth } from "@/context/AuthContext"
 import LoadingSpinner from "@/components/ui/loading-spinner"
+import { format, addMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay } from "date-fns"
 
 export default function BookSession() {
   const { user, loading, userData } = useAuth()
@@ -17,6 +18,11 @@ export default function BookSession() {
   const [error, setError] = useState("")
   const [bookingInProgress, setBookingInProgress] = useState(false)
   const router = useRouter()
+
+  const [selectedCourse, setSelectedCourse] = useState("Coding")
+  const [selectedDate, setSelectedDate] = useState(new Date())
+  const [currentMonth, setCurrentMonth] = useState(new Date())
+  const [availableDates, setAvailableDates] = useState([])
 
   useEffect(() => {
     if (!loading && !user) {
@@ -34,13 +40,20 @@ export default function BookSession() {
 
       try {
         const mentorsRef = collection(db, "mentors")
-        const q = query(mentorsRef, where("course", "==", userData.course))
+        const q = query(mentorsRef, where("course", "==", selectedCourse))
         const querySnapshot = await getDocs(q)
 
         const mentorsList = []
+        const dates = new Set()
         for (const docSnapshot of querySnapshot.docs) {
           const mentorData = docSnapshot.data()
           const userDoc = await getDoc(doc(db, "users", docSnapshot.id))
+
+          mentorData.availabilitySlots.forEach((slot) => {
+            if (!slot.booked) {
+              dates.add(format(new Date(slot.startTime), "yyyy-MM-dd"))
+            }
+          })
 
           mentorsList.push({
             id: docSnapshot.id,
@@ -50,6 +63,7 @@ export default function BookSession() {
         }
 
         setMentors(mentorsList)
+        setAvailableDates(Array.from(dates).map((date) => new Date(date)))
       } catch (error) {
         console.error("Error fetching mentors:", error)
         setError("Failed to load mentors. Please try again.")
@@ -58,24 +72,21 @@ export default function BookSession() {
       }
     }
 
-    if (userData) {
-      fetchMentors()
-    }
-  }, [userData])
+    fetchMentors()
+  }, [userData, selectedCourse])
 
   useEffect(() => {
     if (selectedMentor) {
-      const now = new Date()
-      const futureSlots = selectedMentor.availabilitySlots.filter((slot) => {
+      const slotsForSelectedDate = selectedMentor.availabilitySlots.filter((slot) => {
         const slotDate = new Date(slot.startTime)
-        return slotDate > now
+        return isSameDay(slotDate, selectedDate) && !slot.booked
       })
 
-      setAvailableSlots(futureSlots)
+      setAvailableSlots(slotsForSelectedDate)
     } else {
       setAvailableSlots([])
     }
-  }, [selectedMentor])
+  }, [selectedMentor, selectedDate])
 
   const handleMentorSelect = (mentor) => {
     setSelectedMentor(mentor)
@@ -119,7 +130,7 @@ export default function BookSession() {
         mentorName: selectedMentor.name,
         studentId: user.uid,
         studentName: userData.name,
-        course: userData.course,
+        course: selectedCourse,
         startTime: selectedSlot.startTime,
         endTime: selectedSlot.endTime,
         googleMeetLink: "http:link",
@@ -153,6 +164,41 @@ export default function BookSession() {
     }
   }
 
+  const renderCalendar = () => {
+    const monthStart = startOfMonth(currentMonth)
+    const monthEnd = endOfMonth(monthStart)
+    const dateRange = eachDayOfInterval({ start: monthStart, end: monthEnd })
+
+    return (
+      <div className="grid grid-cols-7 gap-1">
+        {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
+          <div key={day} className="text-center font-bold">
+            {day}
+          </div>
+        ))}
+        {dateRange.map((date, idx) => {
+          const isAvailable = availableDates.some((availableDate) => isSameDay(availableDate, date))
+          return (
+            <button
+              key={idx}
+              onClick={() => isAvailable && setSelectedDate(date)}
+              className={`p-2 text-center ${
+                isSameDay(date, selectedDate)
+                  ? "bg-[#3498db] text-white"
+                  : isAvailable
+                    ? "bg-[#2ecc71] text-white hover:bg-[#27ae60]"
+                    : "bg-gray-200 text-gray-400 cursor-not-allowed"
+              }`}
+              disabled={!isAvailable}
+            >
+              {format(date, "d")}
+            </button>
+          )
+        })}
+      </div>
+    )
+  }
+
   if (loading || !userData) {
     return <LoadingSpinner />
   }
@@ -167,14 +213,53 @@ export default function BookSession() {
 
       {error && <p className="text-[#e74c3c] text-sm mb-4">{error}</p>}
 
+      {/* Course Selection */}
+      <div className="mb-6">
+        <h2 className="text-xl font-semibold text-[#333333] mb-2">Select a Course</h2>
+        <div className="flex space-x-4">
+          {["Coding", "DSA", "Digital Marketing"].map((course) => (
+            <button
+              key={course}
+              onClick={() => setSelectedCourse(course)}
+              className={`px-4 py-2 rounded-lg ${
+                selectedCourse === course ? "bg-[#3498db] text-white" : "bg-gray-200 text-[#333333] hover:bg-gray-300"
+              }`}
+            >
+              {course}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Month and Date Selection */}
+      <div className="mb-6">
+        <h2 className="text-xl font-semibold text-[#333333] mb-2">Select a Date</h2>
+        <div className="flex items-center justify-between mb-4">
+          <button
+            onClick={() => setCurrentMonth(addMonths(currentMonth, -1))}
+            className="bg-[#3498db] text-white px-4 py-2 rounded-lg"
+          >
+            Previous Month
+          </button>
+          <span className="text-lg font-semibold">{format(currentMonth, "MMMM yyyy")}</span>
+          <button
+            onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}
+            className="bg-[#3498db] text-white px-4 py-2 rounded-lg"
+          >
+            Next Month
+          </button>
+        </div>
+        {renderCalendar()}
+      </div>
+
       {/* Mentor Selection */}
       <div className="mb-6">
-        <h2 className="text-xl font-semibold text-[#333333] mb-2">Select a Mentor</h2>
+        <h2 className="text-xl font-semibold text-[#333333] mb-2">Available Mentors</h2>
 
         {loadingMentors ? (
           <LoadingSpinner />
         ) : mentors.length === 0 ? (
-          <p className="text-base text-[#333333]">No mentors available for your course.</p>
+          <p className="text-base text-[#333333]">No mentors available for the selected course and date.</p>
         ) : (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {mentors.map((mentor) => (
@@ -188,7 +273,12 @@ export default function BookSession() {
                 <h3 className="text-base font-semibold text-[#333333]">{mentor.name}</h3>
                 <p className="text-base text-[#333333]">Course: {mentor.course}</p>
                 <p className="text-base text-[#333333]">
-                  Available Slots: {mentor.availabilitySlots.filter((slot) => !slot.booked).length}
+                  Available Slots:{" "}
+                  {
+                    mentor.availabilitySlots.filter(
+                      (slot) => !slot.booked && isSameDay(new Date(slot.startTime), selectedDate),
+                    ).length
+                  }
                 </p>
               </div>
             ))}
@@ -202,32 +292,27 @@ export default function BookSession() {
           <h2 className="text-xl font-semibold text-[#333333] mb-2">Select a Time Slot</h2>
 
           {availableSlots.length === 0 ? (
-            <p className="text-base text-[#333333]">No available slots for this mentor.</p>
+            <p className="text-base text-[#333333]">No available slots for this mentor on the selected date.</p>
           ) : (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {availableSlots
-                .filter((slot) => !slot.booked)
-                .map((slot) => {
-                  const startTime = new Date(slot.startTime)
-                  const endTime = new Date(slot.endTime)
+              {availableSlots.map((slot) => {
+                const startTime = new Date(slot.startTime)
+                const endTime = new Date(slot.endTime)
 
-                  return (
-                    <div
-                      key={slot.id}
-                      className={`p-4 bg-white border border-[#e0e0e0] rounded-lg shadow-sm cursor-pointer hover:border-[#3498db] transition-colors ${
-                        selectedSlot?.id === slot.id ? "border-[#3498db]" : ""
-                      }`}
-                      onClick={() => handleSlotSelect(slot)}
-                    >
-                      <p className="text-base text-[#333333]">
-                        Date: {startTime.toLocaleDateString()}
-                      </p>
-                      <p className="text-base text-[#333333]">
-                        Time: {startTime.toLocaleTimeString()} - {endTime.toLocaleTimeString()}
-                      </p>
-                    </div>
-                  )
-                })}
+                return (
+                  <div
+                    key={slot.id}
+                    className={`p-4 bg-white border border-[#e0e0e0] rounded-lg shadow-sm cursor-pointer hover:border-[#3498db] transition-colors ${
+                      selectedSlot?.id === slot.id ? "border-[#3498db]" : ""
+                    }`}
+                    onClick={() => handleSlotSelect(slot)}
+                  >
+                    <p className="text-base text-[#333333]">
+                      Time: {format(startTime, "h:mm a")} - {format(endTime, "h:mm a")}
+                    </p>
+                  </div>
+                )
+              })}
             </div>
           )}
         </div>
@@ -246,3 +331,4 @@ export default function BookSession() {
     </div>
   )
 }
+

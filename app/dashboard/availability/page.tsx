@@ -7,6 +7,7 @@ import { db } from "@/lib/firebase"
 import { useAuth } from "@/context/AuthContext"
 import LoadingSpinner from "@/components/ui/loading-spinner"
 import { v4 as uuidv4 } from "uuid"
+import { format, addMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay } from "date-fns"
 
 export default function ManageAvailability() {
   const { user, loading, userData } = useAuth()
@@ -18,6 +19,9 @@ export default function ManageAvailability() {
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
   const router = useRouter()
+
+  const [selectedDate, setSelectedDate] = useState(new Date())
+  const [currentMonth, setCurrentMonth] = useState(new Date())
 
   useEffect(() => {
     if (!loading && !user) {
@@ -122,6 +126,33 @@ export default function ManageAvailability() {
     }
   }
 
+  const renderCalendar = () => {
+    const monthStart = startOfMonth(currentMonth)
+    const monthEnd = endOfMonth(monthStart)
+    const dateRange = eachDayOfInterval({ start: monthStart, end: monthEnd })
+
+    return (
+      <div className="grid grid-cols-7 gap-1">
+        {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
+          <div key={day} className="text-center font-bold">
+            {day}
+          </div>
+        ))}
+        {dateRange.map((date, idx) => (
+          <button
+            key={idx}
+            onClick={() => setSelectedDate(date)}
+            className={`p-2 text-center ${
+              isSameDay(date, selectedDate) ? "bg-[#3498db] text-white" : "hover:bg-gray-100"
+            }`}
+          >
+            {format(date, "d")}
+          </button>
+        ))}
+      </div>
+    )
+  }
+
   if (loading || !userData) {
     return <LoadingSpinner />
   }
@@ -140,19 +171,27 @@ export default function ManageAvailability() {
       <div className="mb-6">
         <h2 className="text-xl font-semibold mb-2">Add New Availability Slot</h2>
 
-        <div className="grid gap-4 md:grid-cols-3">
-          <div>
-            <label htmlFor="date">Date</label>
-            <input
-              id="date"
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              min={new Date().toISOString().split("T")[0]}
-              required
-            />
+        {/* Month and Date Selection */}
+        <div className="mb-4">
+          <div className="flex items-center justify-between mb-2">
+            <button
+              onClick={() => setCurrentMonth(addMonths(currentMonth, -1))}
+              className="bg-[#3498db] text-white px-4 py-2 rounded-lg"
+            >
+              Previous Month
+            </button>
+            <span className="text-lg font-semibold">{format(currentMonth, "MMMM yyyy")}</span>
+            <button
+              onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}
+              className="bg-[#3498db] text-white px-4 py-2 rounded-lg"
+            >
+              Next Month
+            </button>
           </div>
+          {renderCalendar()}
+        </div>
 
+        <div className="grid gap-4 md:grid-cols-2">
           <div>
             <label htmlFor="startTime">Start Time</label>
             <input
@@ -170,7 +209,7 @@ export default function ManageAvailability() {
           </div>
         </div>
 
-        <button onClick={handleAddSlot} className="mt-4">
+        <button onClick={handleAddSlot} className="mt-4 bg-[#3498db] text-white px-4 py-2 rounded-lg">
           Add Slot
         </button>
       </div>
@@ -184,26 +223,31 @@ export default function ManageAvailability() {
           <p>No availability slots added yet.</p>
         ) : (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {availabilitySlots.map((slot) => {
-              const startTime = new Date(slot.startTime)
-              const endTime = new Date(slot.endTime)
+            {availabilitySlots
+              .filter((slot) => isSameDay(new Date(slot.startTime), selectedDate))
+              .map((slot) => {
+                const startTime = new Date(slot.startTime)
+                const endTime = new Date(slot.endTime)
 
-              return (
-                <div key={slot.id} className={`p-4 border rounded-lg ${slot.booked ? "bg-gray-100" : ""}`}>
-                  <p>Date: {startTime.toLocaleDateString()}</p>
-                  <p>
-                    Time: {startTime.toLocaleTimeString()} - {endTime.toLocaleTimeString()}
-                  </p>
-                  <p>Status: {slot.booked ? "Booked" : "Available"}</p>
+                return (
+                  <div key={slot.id} className={`p-4 border rounded-lg ${slot.booked ? "bg-gray-100" : ""}`}>
+                    <p>Date: {format(startTime, "MMMM d, yyyy")}</p>
+                    <p>
+                      Time: {format(startTime, "h:mm a")} - {format(endTime, "h:mm a")}
+                    </p>
+                    <p>Status: {slot.booked ? "Booked" : "Available"}</p>
 
-                  {!slot.booked && (
-                    <button onClick={() => handleDeleteSlot(slot.id)} className="mt-2">
-                      Delete
-                    </button>
-                  )}
-                </div>
-              )
-            })}
+                    {!slot.booked && (
+                      <button
+                        onClick={() => handleDeleteSlot(slot.id)}
+                        className="mt-2 bg-red-500 text-white px-4 py-2 rounded-lg"
+                      >
+                        Delete
+                      </button>
+                    )}
+                  </div>
+                )
+              })}
           </div>
         )}
       </div>
