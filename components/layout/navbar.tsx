@@ -5,7 +5,7 @@ import { useAuth } from "@/context/AuthContext"
 import { useState } from "react"
 import { FaUser, FaBook, FaCalendar, FaCog } from "react-icons/fa"
 import { Menu } from "../ui/menu"
-import { MenuButton, MenuItem, MenuItems } from "../ui/Menu"
+import { MenuButton, MenuItem, MenuItems } from "../ui/menu"
 export default function Navbar() {
   const { user, logout, userData } = useAuth()
   const [isOpen, setIsOpen] = useState(false)
